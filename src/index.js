@@ -11,7 +11,11 @@ const truncateFilename = s => Cypress._.truncate(s, {
   omission: ''
 })
 const getCleanFilename = s => truncateFilename(cleanupFilename(s))
-const getFilepath = filename => path.join('cypress', 'logs', filename)
+const getFilepath = (filename) => {
+  Cypress.env('logFolder')
+    ? path.join(Cypress.env('logFolder'), filename)
+    : path.join('cypress', 'logs', filename)
+}
 
 function writeFailedTestInfo ({
   specName,
