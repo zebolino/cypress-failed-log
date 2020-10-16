@@ -12,7 +12,7 @@ const truncateFilename = s => Cypress._.truncate(s, {
 })
 const getCleanFilename = s => truncateFilename(cleanupFilename(s))
 const getFilepath = (filename) => {
-  Cypress.env('logFolder')
+  return Cypress.env('logFolder')
     ? path.join(Cypress.env('logFolder'), filename)
     : path.join('cypress', 'logs', filename)
 }
