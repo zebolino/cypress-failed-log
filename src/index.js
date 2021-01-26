@@ -1,4 +1,5 @@
 /// <reference types="cypress" />
+// @ts-check
 'use strict'
 
 const path = require('path')
@@ -21,7 +22,6 @@ function writeFailedTestInfo ({
   specName,
   title,
   suiteName,
-  testId,
   testName,
   testError,
   testCommands
@@ -30,7 +30,6 @@ function writeFailedTestInfo ({
     specName,
     title,
     suiteName,
-    testId,
     testName,
     testError,
     testCommands
@@ -39,7 +38,6 @@ function writeFailedTestInfo ({
   const cleaned = getCleanFilename(
     Cypress._.join([
       Cypress._.split(specName, '.')[0],
-      testId,
       testName
     ], '-'))
   const filename = `failed-${cleaned}.json`
@@ -47,6 +45,8 @@ function writeFailedTestInfo ({
   cy
     .writeFile(filepath, str)
     .log(`saved failed test information to ${filename}`)
+
+  return filepath
 }
 
 let savingCommands = false
@@ -81,6 +81,17 @@ function startLogging () {
       loggedCommands.push(log)
     }
   })
+
+  Cypress.on('log:changed', options => {
+    if (options.instrument === 'command' && options.consoleProps) {
+      // This is NOT the exact command duration, since we are only
+      // getting an event some time after the command finishes.
+      // Still better to have approximate value than nothing
+      options.wallClockStoppedAt = Date.now()
+      options.duration = +options.wallClockStoppedAt - (+ new Date(options.wallClockStartedAt))
+      options.consoleProps.Duration = options.duration
+    }
+  })
 }
 
 function initLog () {
@@ -94,7 +105,6 @@ function onFailed () {
   }
 
   const testName = this.currentTest.fullTitle()
-  const testId = this.currentTest.id
   // prevents processing failed test twice - from our "afterEach" callback
   // and from wrapping user "afterEach"
   if (hasSeen(testName)) {
@@ -135,12 +145,12 @@ function onFailed () {
     specName,
     title,
     suiteName,
-    testId,
     testName,
     testError,
     testCommands
   }
-  writeFailedTestInfo(info)
+  const filepath = writeFailedTestInfo(info)
+  info.filepath = filepath
 
   cy.task('failed', info, { log: false })
 }
